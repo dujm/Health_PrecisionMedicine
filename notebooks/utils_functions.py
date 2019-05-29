@@ -147,31 +147,37 @@ def build_corpus(df,target,text,stop_words,wordnet_lemmatizer):
 
 
 # World frequency plot
-def word_freq_plot(class_corpus, save_plot_dir):
-    whole_text_freq = class_corpus.sum()
-    fig, ax = plt.subplots()
-    label, repetition = zip(*whole_text_freq.most_common(25))
-    ax.barh(range(len(label)), repetition, align='center')
-    ax.set_yticks(np.arange(len(label)))
-    ax.set_yticklabels(label)
-    ax.invert_yaxis()
-    ax.set_title('Word Distribution Over Whole Text')
-    ax.set_xlabel('# of repetitions')
-    ax.set_ylabel('Word')
+def word_cloud_plot_no_mask(corpus,save_plot_dir):
+    whole_text_freq = corpus.sum()
+    wc = WordCloud(max_font_size=300,min_font_size=30,
+               max_words=1000,
+               width=4000,
+               height=2000,
+               prefer_horizontal=.9,
+               relative_scaling=.52,
+               background_color='black',
+               mask=None,
+               mode="RGBA").generate_from_frequencies(whole_text_freq)
+    plt.figure()
+    plt.axis("off")
     plt.tight_layout()
-    plt.show()
+    #plt.savefig(figname, figdpi = 300)
+    plt.imshow(wc, interpolation="bilinear")
     #save plot
-    name= 'word_freq_in_corpus'
+    #plt.figure(figsize=(10,5))
+    name= 'word_cloud_plot'
     figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    plt.savefig(figname, figdpi = 300)
+    plt.savefig(figname,figdpi = 600)
+    plt.show()
+    plt.close()
 
 # Build a word cloud without mask image
 def word_cloud_plot_no_mask(corpus,save_plot_dir):
-    whole_text_freq = class_corpus.sum()
+    whole_text_freq = corpus.sum()
     wc = WordCloud(max_font_size=300,min_font_size=30,
                max_words=1000,
-               width=mask_image.shape[1],
-               height=mask_image.shape[0],
+               width=4000,
+               height=2000,
                prefer_horizontal=.9,
                relative_scaling=.52,
                background_color='black',
@@ -193,7 +199,7 @@ def word_cloud_plot_no_mask(corpus,save_plot_dir):
 def word_cloud_plot(mask_image_path, corpus,save_plot_dir):
     mask_image = np.array(Image.open(mask_image_path).convert('L'))
     mask_image = resize_image(mask_image, (8000, 4000))
-    whole_text_freq = class_corpus.sum()
+    whole_text_freq = corpus.sum()
     wc = WordCloud(max_font_size=300,min_font_size=30,
                max_words=1000,
                width=mask_image.shape[1],
@@ -208,7 +214,7 @@ def word_cloud_plot(mask_image_path, corpus,save_plot_dir):
     plt.tight_layout()
     plt.imshow(wc, interpolation="bilinear")
     #save plot
-    name= 'word_cloud_plot'
+    name= 'word_cloud_mask_plot'
     figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
     plt.savefig(figname, figdpi = 600)
 
