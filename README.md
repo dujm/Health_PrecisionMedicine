@@ -49,6 +49,8 @@ pip install -r requirements.txt
      ├── models
      ├── notebooks
      │   ├── 01EDA.ipynb
+     │   ├── 02Feature_and_Model_Sample_Data.ipynb
+     │   ├── 03Feature_Model_Full_Data.ipynb
      │   └── utils_functions.py
      ├── references
      ├── reports
@@ -62,3 +64,5 @@ pip install -r requirements.txt
 ### References
  * [Personalized Medicine: Redefining Cancer Treatment](https://www.kaggle.com/c/msk-redefining-cancer-treatment)
  * [A simple anaysis of the dataset using nltk and Word2Vec](https://www.kaggle.com/umutto/preliminary-data-analysis-using-word2vec/data)
+ * [Basic NLP](https://www.kaggle.com/reiinakano/basic-nlp-bag-of-words-tf-idf-word2vec-lstm)
+ * Paweł Jankiewicz
