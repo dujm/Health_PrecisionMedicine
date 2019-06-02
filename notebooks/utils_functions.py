@@ -4,8 +4,6 @@
 import os
 import re
 import datetime
-import warnings
-warnings.simplefilter("ignore", UserWarning)
 
 # Data related
 import numpy as np # linear algebra
@@ -15,6 +13,7 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import seaborn as sns, matplotlib.pyplot as plt
 
 # Text analysis helper libraries
+import gensim
 from gensim.summarization import summarize, keywords
 from gensim.models import KeyedVectors
 
@@ -29,7 +28,6 @@ from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from string import punctuation
 import snowballstemmer
-import gensim
 
 
 # Word cloud visualization libraries
@@ -51,6 +49,11 @@ from sklearn.cluster import KMeans
 from sklearn.model_selection import cross_val_predict, StratifiedKFold, train_test_split
 from sklearn.metrics import log_loss, accuracy_score
 import scikitplot.plotters as skplt
+
+# keras
+from keras.models import Sequential
+from keras.layers import Dense, Flatten, LSTM, Conv1D, MaxPooling1D, Dropout, Activation, Embedding
+from keras.optimizers import Adam
 
 
 # Create a new folder function
@@ -443,3 +446,28 @@ class MeanEmbeddingVectorizer(object):
     def fit_transform(self, X, y=None):
         return self.transform(X)
  
+
+
+# -
+
+# A baseline LSTM model
+def baseline_model():
+    model = Sequential()
+    model.add(Embedding(vocabulary_size, 64, input_length = X.shape[1]))
+    model.add(LSTM(196, recurrent_dropout=0.2, dropout=0.2))
+    model.add(Dense(9,activation='softmax'))
+    model.compile(loss = 'categorical_crossentropy', optimizer='adam', metrics = ['categorical_crossentropy'])
+    return model
+    
+
+
+# Embedding + LSTM model
+def EL_model(vocabulary_size,X, embedding_matrix,embed_matrix_dim):
+    model = Sequential()
+    model.add(Embedding(vocabulary_size, embed_matrix_dim, input_length = X.shape[1],\
+                       weights=[embedding_matrix], trainable=False))
+    model.add(LSTM(196))
+    model.add(Dense(9, activation='softmax'))
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
+    
