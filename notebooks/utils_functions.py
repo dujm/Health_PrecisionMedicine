@@ -11,6 +11,7 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 
 # Visualization
 import seaborn as sns, matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 
 # Text analysis helper libraries
 import gensim
@@ -149,17 +150,17 @@ def resize_image(np_img, new_size):
 
     return imresize(np_img, (round(old_size[0]*ratio), round(old_size[1]*ratio)))
 
-# Get average vector from text
-def get_average_vector(text,stop_words):
-    tokens = [w.lower() for w in word_tokenize(text) if w.lower() not in stop_words]
-    return np.mean(np.array([model.wv[w] for w in tokens if w in model]), axis=0)
-
 custom_words = ["fig", "figure", "et", "al", "al.", "also",
                 "data", "analyze", "study", "table", "using",
                 "method", "result", "conclusion", "author", 
                 "find", "found", "show", '"', "’", "“", "”"]
 stop_words = set(stopwords.words('english') + list(punctuation) + custom_words)
 
+
+# Get average vector from text
+def get_average_vector(model,text,stop_words):
+    tokens = [w.lower() for w in word_tokenize(text) if w.lower() not in stop_words]
+    return np.mean(np.array([model.wv[w] for w in tokens if w in model]), axis=0)
 
 # Build a corpus for a Text column grouped by Target columns
 def build_corpus(df,target,text,stop_words,wordnet_lemmatizer):
@@ -274,13 +275,14 @@ def pca_plot(classes, vecs,save_plot_dir=None):
 def kmeans_plot(classes, vecs,save_plot_dir=None):
     kmeans = KMeans(n_clusters=9).fit(vecs)
     c_labels = kmeans.labels_
+    reduced_vecs=kmeans.fit_transform(vecs)
     fig, ax = plt.subplots()
     cm = plt.get_cmap('jet', 9)
     colors = [cm(i/9) for i in range(9)]
     ax.scatter(reduced_vecs[:,0], reduced_vecs[:,1], c=[colors[c-1] for c in c_labels], cmap='jet', s=8)
     plt.legend(handles=[Patch(color=colors[i], label='Class {}'.format(i+1)) for i in range(9)])
-    ax.set_xlim([-0.5,0.5])
-    ax.set_ylim([-0.5,0.5])
+    ax.set_xlim()
+    ax.set_ylim()
     plt.show()
     #save plot
     name= 'kmeans_plot'
@@ -458,7 +460,6 @@ def baseline_model():
     model.add(Dense(9,activation='softmax'))
     model.compile(loss = 'categorical_crossentropy', optimizer='adam', metrics = ['categorical_crossentropy'])
     return model
-    
 
 
 # Embedding + LSTM model
@@ -470,4 +471,4 @@ def EL_model(vocabulary_size,X, embedding_matrix,embed_matrix_dim):
     model.add(Dense(9, activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
-    
+
