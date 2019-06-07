@@ -13,6 +13,7 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import seaborn as sns, matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
+
 # Text analysis helper libraries
 import gensim
 from gensim.summarization import summarize, keywords
@@ -93,14 +94,14 @@ def dm(data):
 
 
 # Group by a column and count the size 
-def groupby_col_count(df, colname,save_csv_dir=None):
+def groupby_col_count(df, colname,colname2=None,save_csv_dir=None,head=None):
     df1 = df.groupby([df[colname]]) \
         .size() \
         .sort_values(ascending=False)
     name= 'groupby_' +str(colname)
     csvname = '{}.csv'.format(os.path.join(save_csv_dir,name))
     df1.to_csv(csvname,index=False)
-    return df1.head(5)
+    return df1.head(head)
 
 
 # Bar Plot: Count by colname
@@ -290,6 +291,30 @@ def kmeans_plot(classes, vecs,save_plot_dir=None):
     #image
     fig.savefig(figname, figdpi = 300)
     plt.close()
+
+
+# Heatmap table
+def corr_heattable(df):
+    for col in df:
+        df[col].astype('category').cat.codes 
+    df_corr =df.corr()   
+    return corr.style.background_gradient(cmap='coolwarm').set_precision(2)
+
+
+# Heatmap plot
+def corr_heatmap(df,plot_name, save_plot_dir=None):
+    for col in df:
+        df[col].astype('category').cat.codes 
+    corr =df.corr()
+    plot = sns.heatmap(corr, 
+                      xticklabels=corr.columns,
+                      yticklabels=corr.columns)
+    #save plot
+    name= str(plot_name)
+    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
+
+    plt.savefig(figname, figdpi = 600)
+    return plot
 
 
 def evaluate_features(X, y, clf):
