@@ -51,6 +51,7 @@ pip install -r requirements.txt
      │   ├── 01EDA.ipynb
      │   ├── 02Feature_and_Model_Sample_Data.ipynb
      │   ├── 03Feature_Model_Full_Data.ipynb
+     │   ├── 04LSTM_baseline_Full_Data.ipynb    
      │   └── utils_functions.py
      ├── references
      ├── reports
