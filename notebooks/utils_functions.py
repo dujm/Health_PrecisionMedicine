@@ -51,6 +51,9 @@ from sklearn.cluster import KMeans
 from sklearn.model_selection import cross_val_predict, StratifiedKFold, train_test_split
 from sklearn.metrics import log_loss, accuracy_score
 import scikitplot.plotters as skplt
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import make_pipeline, make_union
+
 
 # keras
 from keras.models import Sequential
@@ -496,4 +499,50 @@ def EL_model(vocabulary_size,X, embedding_matrix,embed_matrix_dim):
     model.add(Dense(9, activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
+
+
+# +
+# Select multiple pandas columns and convert to vectors
+class PandasSelector(BaseEstimator, TransformerMixin):
+    
+    def __init__(self, columns):
+        self.columns = columns
+        
+    def fit(self, x, y = None):
+        return self
+    
+    def transform(self, x):
+        return x.loc[:,self.columns]
+    
+    
+class PandasToDict(BaseEstimator, TransformerMixin):
+
+    def fit(self, x, y = None):
+        return self
+    
+    def transform(self, x):
+        return x.T.to_dict().values()
+
+    
+# -
+
+# Select one dataframe column for transformer
+class ItemSelector(BaseEstimator, TransformerMixin):
+    def __init__(self, key):
+        self.key = key
+
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, data_frame):
+        return data_frame[[self.key]]
+
+
+class Converter(BaseEstimator, TransformerMixin):
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, data_frame):
+        return data_frame.values.ravel()
+
 
