@@ -523,7 +523,7 @@ class PandasToDict(BaseEstimator, TransformerMixin):
     def transform(self, x):
         return x.T.to_dict().values()
 
-    
+
 # -
 
 # Select one dataframe column for transformer
@@ -544,5 +544,12 @@ class Converter(BaseEstimator, TransformerMixin):
 
     def transform(self, data_frame):
         return data_frame.values.ravel()
+
+
+# Select one dataframe column for vectorization
+def build_preprocessor(df,field):
+    field_idx = list(df.columns).index(field)
+    return lambda x: default_preprocessor(x[field_idx])
+    
 
 
