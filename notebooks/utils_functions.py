@@ -550,6 +550,6 @@ class Converter(BaseEstimator, TransformerMixin):
 def build_preprocessor(df,field):
     field_idx = list(df.columns).index(field)
     return lambda x: default_preprocessor(x[field_idx])
-    
+
 
 
