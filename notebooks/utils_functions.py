@@ -17,7 +17,9 @@ from matplotlib.patches import Patch
 # Text analysis helper libraries
 import gensim
 from gensim.summarization import summarize, keywords
-from gensim.models import KeyedVectors
+from gensim.models import KeyedVectors, doc2vec
+from gensim.models.doc2vec import TaggedDocument
+
 
 # Text analysis helper libraries for word frequency
 import nltk
@@ -47,7 +49,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 # -
 
-# sklearn 
+# sklearn
 from sklearn.model_selection import cross_val_predict, StratifiedKFold, train_test_split
 from sklearn.metrics import log_loss, accuracy_score
 import scikitplot.plotters as skplt
@@ -56,6 +58,7 @@ from sklearn.pipeline import make_pipeline, make_union
 
 
 # keras
+from tensorflow.keras import backend
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, LSTM, Conv1D, MaxPooling1D, Dropout, Activation, Embedding
 from keras.optimizers import Adam
@@ -96,7 +99,14 @@ def dm(data):
     return unique_data.sort_values(by=['unique_number','dtype'])
 
 
-# Group by a column and count the size 
+# Drop duplicated column after pandas.merge
+def drop_y(df):
+    # list comprehension of the cols that end with '_y'
+    to_drop = [x for x in df if x.endswith('_y')]
+    df.drop(to_drop, axis=1, inplace=True)
+
+
+# Group by a column and count the size
 def groupby_col_count(df, colname,colname2=None,save_csv_dir=None,head=None):
     df1 = df.groupby([df[colname]]) \
         .size() \
@@ -156,7 +166,7 @@ def resize_image(np_img, new_size):
 
 custom_words = ["fig", "figure", "et", "al", "al.", "also",
                 "data", "analyze", "study", "table", "using",
-                "method", "result", "conclusion", "author", 
+                "method", "result", "conclusion", "author",
                 "find", "found", "show", '"', "’", "“", "”"]
 stop_words = set(stopwords.words('english') + list(punctuation) + custom_words)
 
@@ -299,17 +309,17 @@ def kmeans_plot(classes, vecs,save_plot_dir=None):
 # Heatmap table
 def corr_heattable(df):
     for col in df:
-        df[col].astype('category').cat.codes 
-    df_corr =df.corr()   
+        df[col].astype('category').cat.codes
+    df_corr =df.corr()
     return corr.style.background_gradient(cmap='coolwarm').set_precision(2)
 
 
 # Heatmap plot
 def corr_heatmap(df,plot_name, save_plot_dir=None):
     for col in df:
-        df[col].astype('category').cat.codes 
+        df[col].astype('category').cat.codes
     corr =df.corr()
-    plot = sns.heatmap(corr, 
+    plot = sns.heatmap(corr,
                       xticklabels=corr.columns,
                       yticklabels=corr.columns)
     #save plot
@@ -322,14 +332,14 @@ def corr_heatmap(df,plot_name, save_plot_dir=None):
 
 def evaluate_features(X, y, clf):
     """General helper function for evaluating effectiveness of passed features in ML model
-    
+
     Prints out Log loss, accuracy, and confusion matrix with 3-fold stratified cross-validation
-    
+
     Args:
         X (array-like): Features array. Shape (n_samples, n_features)
-        
+
         y (array-like): Labels array. Shape (n_samples,)
-        
+
         clf: Classifier to use. If None, default Log reg is use.
         e.g.
         from sklearn.linear_model import LogisticRegression
@@ -352,12 +362,12 @@ def evaluate_features(X, y, clf):
         skplt.plot_confusion_matrix(y, preds)
 
 
-# Split a pandas dataframe into train and validation dataset 
+# Split a pandas dataframe into train and validation dataset
 def split_data(df,text,target,test_size,random_state,stratify=None):
     '''
     df[text]: text data for training
     df[target]: label of text data
-    
+
     '''
     df[text] = df[text].astype(str)
     df[target] = df[target].astype(str)
@@ -372,18 +382,19 @@ def split_data(df,text,target,test_size,random_state,stratify=None):
 
 
 # +
+# Simple text clean 
 def clean_text(t):
-    """Accepts a Document 
+    """Accepts a Document
     """
     t = t.lower()
     # Remove single characters
     t = re.sub("[^A-Za-z0-9]"," ",t)
     # Replace all numbers by a single char
-    t = re.sub("[0-9]+","#",t)   
+    t = re.sub("[0-9]+","#",t)
     return t
 
 def clean_text_stemmed(t):
-    """Accepts a Document 
+    """Accepts a Document
     """
     t = t.lower()
     # Remove single characters
@@ -391,21 +402,43 @@ def clean_text_stemmed(t):
     # Replace all numbers by a single char
     t = re.sub("[0-9]+","#",t)
     stemmer = snowballstemmer.stemmer('english')
-    tfinal = " ".join(stemmer.stemWords(t.split()))    
+    tfinal = " ".join(stemmer.stemWords(t.split()))
     return t
+
+
+
+# +
+# Good text clean
+from nltk.corpus import stopwords
+from string import punctuation
+import re
+
+def textClean_full(text):
+    text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
+    text = text.lower().split()
+    # remove stop words
+    custom_words = ["fig", "figure", "et", "al", "al.", "also",
+                "data", "analyze", "study", "table", "using","in",
+                "find", "found", "show", "a",'"', "’", "“", "”","#"]
+    stop_words = set(stopwords.words('english') + list(punctuation) + custom_words)        
+    text = [w for w in text if not w in stop_words]    
+    text = " ".join(text)
+    return(text)
+
+
 
 # +
 class MySentences(object):
-    """MySentences is a generator to produce a list of tokenized sentences 
-    
+    """MySentences is a generator to produce a list of tokenized sentences
+
     Takes a list of numpy arrays containing documents.
-    
+
     Args:
         arrays: List of arrays, where each element in the array contains a document.
     """
     def __init__(self, *arrays):
         self.arrays = arrays
- 
+
     def __iter__(self):
         for array in self.arrays:
             for document in array:
@@ -414,17 +447,17 @@ class MySentences(object):
 
 def get_word2vec(sentences, location):
     """Returns trained word2vec
-    
+
     Args:
         sentences: iterator for sentences
-        
+
         location (str): Path to save/load word2vec
     """
     if os.path.exists(location):
         print('Found {}'.format(location))
         model = gensim.models.Word2Vec.load(location)
         return model
-    
+
     print('{} not found. training model'.format(location))
     model = gensim.models.Word2Vec(sentences, size=100, window=5, min_count=5, workers=4)
     print('Model done training. Saving to disk')
@@ -438,10 +471,10 @@ def get_word2vec(sentences, location):
 class MyTokenizer:
     def __init__(self):
         pass
-    
+
     def fit(self, X, y=None):
         return self
-    
+
     def transform(self, X):
         transformed_X = []
         for document in X:
@@ -450,7 +483,7 @@ class MyTokenizer:
                 tokenized_doc += nltk.word_tokenize(sent)
             transformed_X.append(np.array(tokenized_doc))
         return np.array(transformed_X)
-    
+
     def fit_transform(self, X, y=None):
         return self.transform(X)
 
@@ -466,22 +499,61 @@ class MeanEmbeddingVectorizer(object):
 
     def transform(self, X):
         X = MyTokenizer().fit_transform(X)
-        
+
         return np.array([
             np.mean([self.word2vec.wv[w] for w in words if w in self.word2vec.wv]
                     or [np.zeros(self.dim)], axis=0)
             for words in X
         ])
-    
+
     def fit_transform(self, X, y=None):
         return self.transform(X)
- 
 
 
 # -
 
+
+class MeanDoc2Vectorizer(object):
+    def __init__(self, word2vec):
+        self.word2vec = word2vec
+        # if a text is empty we should return a vector of zeros
+        # with the same dimensionality as all the other vectors
+        self.dim = len(word2vec.wv.syn0[0])
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = MyTokenizer().fit_transform(X)
+
+        return np.array([
+            np.mean([self.word2vec.wv[w] for w in words if w in self.word2vec.wv]
+                    or [np.zeros(self.dim)], axis=0)
+            for words in X
+        ])
+
+    def fit_transform(self, X, y=None):
+        return self.transform(X)
+
+
+def w2vectors(model, corpus_size, vectors_size, vectors_type):
+    """
+    Get vectors from trained doc2vec model
+    :param doc2vec_model: Trained Doc2Vec model
+    :param corpus_size: Size of the data
+    :param vectors_size: Size of the embedding vectors
+    :param vectors_type: Training or Testing vectors
+    :return: list of vectors
+    """
+    vectors = np.zeros((corpus_size, vectors_size))
+    for i in range(0, corpus_size):
+        prefix = vectors_type + '_' + str(i)
+        vectors[i] = model.docvecs[prefix]
+    return vectors
+
+
 # A baseline LSTM model
-def baseline_model():
+def baseline_model(vocabulary_size,X):
     model = Sequential()
     model.add(Embedding(vocabulary_size, 64, input_length = X.shape[1]))
     model.add(LSTM(196, recurrent_dropout=0.2, dropout=0.2))
@@ -504,22 +576,22 @@ def EL_model(vocabulary_size,X, embedding_matrix,embed_matrix_dim):
 # +
 # Select multiple pandas columns and convert to vectors
 class PandasSelector(BaseEstimator, TransformerMixin):
-    
+
     def __init__(self, columns):
         self.columns = columns
-        
+
     def fit(self, x, y = None):
         return self
-    
+
     def transform(self, x):
         return x.loc[:,self.columns]
-    
-    
+
+
 class PandasToDict(BaseEstimator, TransformerMixin):
 
     def fit(self, x, y = None):
         return self
-    
+
     def transform(self, x):
         return x.T.to_dict().values()
 
@@ -551,5 +623,148 @@ def build_preprocessor(df,field):
     field_idx = list(df.columns).index(field)
     return lambda x: default_preprocessor(x[field_idx])
 
+# Process df type
+def df_process(df,name=None):
+    df =df.drop(['ID'],axis =1)
+    df=df.dropna(subset=['Text','Gene','Variation'])
+    df['Gene'] = df['Gene'].astype(str)
+    df['Variation'] = df['Variation'].astype(str)
+    df['Text'] = df['Text'].astype(str)
+    print(df.head(1))
+    csv_name =str(name)+'df_process.csv'
+    df.to_csv(csv_name,index=False)
+    return df
 
 
+def label_sentences(corpus, label_type):
+    """
+    Gensim's Doc2Vec implementation requires each document/paragraph to have a label associated with it.
+    We do this by using the TaggedDocument method. The format will be "TRAIN_i" or "TEST_i" where "i" is
+    a dummy index of the complaint narrative.
+    """
+    labeled = []
+    for i, v in enumerate(corpus):
+        label = label_type + '_' + str(i)
+        labeled.append(doc2vec.TaggedDocument(v.split(), [label]))
+    return labeled
+
+
+def get_vectors(model, corpus_size, vectors_size, vectors_type):
+    """
+    Get vectors from trained doc2vec model
+    :param doc2vec_model: Trained Doc2Vec model
+    :param corpus_size: Size of the data
+    :param vectors_size: Size of the embedding vectors
+    :param vectors_type: Training or Testing vectors
+    :return: list of vectors
+    """
+    vectors = np.zeros((corpus_size, vectors_size))
+    for i in range(0, corpus_size):
+        prefix = vectors_type + '_' + str(i)
+        vectors[i] = model.docvecs[prefix]
+    return vectors
+
+
+def build_d2v_model(all_data,epoch_nr,model_name):
+    # Initialize Doc2Vec model
+    model_dbow = Doc2Vec(dm=0, \
+                     vector_size=300,\
+                     negative=5, \
+                     min_count=1, \
+                     alpha=0.065, \
+                     min_alpha=0.065)
+    # Build Vocabulary
+    model_dbow.build_vocab([x for x in tqdm(all_data)])
+    # Build Model
+    epoch_nr =int(epoch_nr)
+    for epoch in range(epoch_nr):
+        model_dbow.train(utils.shuffle([x for x in tqdm(all_data)]), total_examples=len(all_data), epochs=1)
+        model_dbow.alpha -= 0.002
+        model_dbow.min_alpha = model_dbow.alpha
+    model_dbow.save(model_name)
+    return model
+
+
+from keras.utils import np_utils
+from sklearn.preprocessing import LabelEncoder
+def encode_label(df):
+    label_encoder = LabelEncoder()
+    label_encoder.fit(df['Class'])
+    encoded_y = np_utils.to_categorical((label_encoder.transform(df['Class'])))
+    print('The encode_y shape is ',encoded_y.shape)
+
+def baseline_model():
+    model = Sequential()
+    model.add(Dense(256,input_shape=(int(stack_shape),)))
+    model.add(Dense(input_dim, init='normal', activation='relu'))
+    model.add(Dropout(0.3))
+    model.add(Dense(256, init='normal', activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(80, init='normal', activation='relu'))
+    model.add(Dense(9, init='normal', activation="softmax"))
+
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    return model
+
+# Embedding + LSTM model
+def EL_model(vocabulary_size,X, embedding_matrix,embed_matrix_dim):
+    model = Sequential()
+    model.add(Embedding(vocabulary_size, embed_matrix_dim, input_length = X.shape[1],\
+                       weights=[embedding_matrix], trainable=False))
+    model.add(LSTM(196))
+    model.add(Dense(9, activation='softmax'))
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
+
+
+import matplotlib.pyplot as plt
+def plot_history(estimator):
+    fig = plt.figure(figsize=(5,5))
+    #plt.subplot(121)
+    plt.plot(estimator.history['acc'])
+    plt.plot(estimator.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
+
+# summarize history for loss
+    #plt.subplot(122)
+    fig = plt.figure(figsize=(5,5))
+    plt.plot(estimator.history['loss'])
+    plt.plot(estimator.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
+    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(('full_kaggle_kears'), datetime.datetime.now())
+    fig.savefig(figname,figdpi = 600)
+    plt.close()
+
+def plot_history(estimator):
+    fig = plt.figure(figsize=(5,5))
+    #plt.subplot(121)
+    plt.plot(estimator.history['acc'])
+    plt.plot(estimator.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
+
+# summarize history for loss
+    #plt.subplot(122)
+    fig = plt.figure(figsize=(5,5))
+    plt.plot(estimator.history['loss'])
+    plt.plot(estimator.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
+    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(('full_kaggle_kears'), datetime.datetime.now())
+    fig.savefig(figname,figdpi = 600)
+    plt.close()
