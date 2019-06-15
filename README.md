@@ -24,6 +24,10 @@ pip install -r requirements.txt
  * [Or install Kaggle API](https://dujm.github.io/datasciences/kaggle) and run:
 
     ```
+    # Save your models in src/
+    mkdir src
+    # Save your data in data/
+    mkdir data
     cd data
     kaggle competitions download msk-redefining-cancer-treatment
     ```
