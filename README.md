@@ -10,6 +10,12 @@ git clone git@github.com:dujm/Health_PrecisionMedicine.git
 # Remove my git directory
 cd Health_PrecisionMedicine
 rm -r .git/
+
+# Create a src/ dir to save models
+mkdir src
+
+# Create a data/ to download and save datasets
+mkdir data
 ```
 
 2. Install packages
@@ -24,11 +30,9 @@ pip install -r requirements.txt
  * [Or install Kaggle API](https://dujm.github.io/datasciences/kaggle) and run:
 
     ```
-    # Save your models in src/
-    mkdir src
-    # Save your data in data/
-    mkdir data
     cd data
+    
+    # Download data
     kaggle competitions download msk-redefining-cancer-treatment
     ```
 
