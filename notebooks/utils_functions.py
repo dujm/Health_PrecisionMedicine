@@ -6,8 +6,8 @@ import re
 import datetime
 
 # Data related
-import numpy as np # linear algebra
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import numpy as np  # linear algebra
+import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 
 # Visualization
 import seaborn as sns, matplotlib.pyplot as plt
@@ -23,10 +23,11 @@ from gensim.models.doc2vec import TaggedDocument
 
 # Text analysis helper libraries for word frequency
 import nltk
+
 # Download stop words
-#nltk.download('stopwords')
-#nltk.download('punkt')
-#nltk.download('wordnet')
+# nltk.download('stopwords')
+# nltk.download('punkt')
+# nltk.download('wordnet')
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -47,6 +48,7 @@ from sklearn.decomposition import PCA
 
 # Clustering library
 from sklearn.cluster import KMeans
+
 # -
 
 # sklearn
@@ -60,7 +62,16 @@ from sklearn.pipeline import make_pipeline, make_union
 # keras
 from tensorflow.keras import backend
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, LSTM, Conv1D, MaxPooling1D, Dropout, Activation, Embedding
+from keras.layers import (
+    Dense,
+    Flatten,
+    LSTM,
+    Conv1D,
+    MaxPooling1D,
+    Dropout,
+    Activation,
+    Embedding,
+)
 from keras.optimizers import Adam
 
 
@@ -73,30 +84,41 @@ def createFolder(directory):
         if not os.path.exists(directory):
             os.makedirs(directory)
     except OSError:
-        print ('Error: Creating directory. ' +  directory)
+        print('Error: Creating directory. ' + directory)
+
 
 # Data munging function
 def dm(data):
     '''
     Summarize data column features in a new data frame
     '''
-    unique_data = pd.DataFrame(columns =('colname','dtype','Null_sum','unique_number','unique_values'))
+    unique_data = pd.DataFrame(
+        columns=('colname', 'dtype', 'Null_sum', 'unique_number', 'unique_values')
+    )
     for col in data:
-        if data[col].nunique() <25:
-            unique_data = unique_data.append({'colname': col, \
-                                              'dtype': data[col].dtype,\
-                                              'Null_sum':data[col].isnull().sum(),\
-                                              'unique_number': data[col].nunique(),\
-                                              'unique_values':data[col].unique()}, \
-                                     ignore_index=True)
+        if data[col].nunique() < 25:
+            unique_data = unique_data.append(
+                {
+                    'colname': col,
+                    'dtype': data[col].dtype,
+                    'Null_sum': data[col].isnull().sum(),
+                    'unique_number': data[col].nunique(),
+                    'unique_values': data[col].unique(),
+                },
+                ignore_index=True,
+            )
         else:
-            unique_data = unique_data.append({'colname': col, \
-                                              'dtype': data[col].dtype,\
-                                              'Null_sum':data[col].isnull().sum(),\
-                                              'unique_number': data[col].nunique(),\
-                                              'unique_values':'>25'}, \
-                                     ignore_index=True)
-    return unique_data.sort_values(by=['unique_number','dtype'])
+            unique_data = unique_data.append(
+                {
+                    'colname': col,
+                    'dtype': data[col].dtype,
+                    'Null_sum': data[col].isnull().sum(),
+                    'unique_number': data[col].nunique(),
+                    'unique_values': '>25',
+                },
+                ignore_index=True,
+            )
+    return unique_data.sort_values(by=['unique_number', 'dtype'])
 
 
 # Drop duplicated column after pandas.merge
@@ -107,40 +129,48 @@ def drop_y(df):
 
 
 # Group by a column and count the size
-def groupby_col_count(df, colname,colname2=None,save_csv_dir=None,head=None):
-    df1 = df.groupby([df[colname]]) \
-        .size() \
-        .sort_values(ascending=False)
-    name= 'groupby_' +str(colname)
-    csvname = '{}.csv'.format(os.path.join(save_csv_dir,name))
-    df1.to_csv(csvname,index=False)
+def groupby_col_count(df, colname, colname2=None, save_csv_dir=None, head=None):
+    df1 = df.groupby([df[colname]]).size().sort_values(ascending=False)
+    name = 'groupby_' + str(colname)
+    csvname = '{}.csv'.format(os.path.join(save_csv_dir, name))
+    df1.to_csv(csvname, index=False)
     return df1.head(head)
 
 
 # Bar Plot: Count by colname
-def col_count_plot(df,colname,save_plot_dir=None):
+def col_count_plot(df, colname, save_plot_dir=None):
     '''
     df: dataframe
     colname: column name
     save_plot_dir: saving plot directory
     '''
-    df=df.drop_duplicates()
+    df = df.drop_duplicates()
     number = df[colname].value_counts().values
     number = [str(x) for x in number.tolist()]
     number = ['n: ' + i for i in number]
-    ax = sns.countplot(x=colname,  data=df)
+    ax = sns.countplot(x=colname, data=df)
     pos = range(len(number))
-    for tick,label in zip(pos,ax.get_xticklabels()):
-        ax.text(pos[tick], + 0.1, number[tick], horizontalalignment='center', size='small', color='w', weight='semibold')
+    for tick, label in zip(pos, ax.get_xticklabels()):
+        ax.text(
+            pos[tick],
+            +0.1,
+            number[tick],
+            horizontalalignment='center',
+            size='small',
+            color='w',
+            weight='semibold',
+        )
     fig = ax.get_figure()
-    #save plot
-    name= str(colname)+'count'
-    figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    fig.savefig(figname, figdpi = 300)
+    # save plot
+    name = str(colname) + 'count'
+    figname = '{}{:%Y%m%dT%H%M}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
+    fig.savefig(figname, figdpi=300)
 
 
 # Frequency plot of a col
-def frequency_plot(df,colname,save_plot_dir=None):
+def frequency_plot(df, colname, save_plot_dir=None):
     '''
     df: dataframe
     colname: column name
@@ -149,160 +179,234 @@ def frequency_plot(df,colname,save_plot_dir=None):
     plt.figure()
     ax = df[colname].value_counts().plot(kind='area')
     ax.get_xaxis().set_ticks([])
-    ax.set_title('Train Data: ' + str(colname) +' Frequency Plot')
+    ax.set_title('Train Data: ' + str(colname) + ' Frequency Plot')
     ax.set_xlabel(colname)
     ax.set_ylabel('Frequency')
     plt.tight_layout()
-    #save plot
-    name= str(colname)+'_frequency'
-    plotname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    plt.savefig(plotname, figdpi = 300)
+    # save plot
+    name = str(colname) + '_frequency'
+    plotname = '{}{:%Y%m%dT%H%M}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
+    plt.savefig(plotname, figdpi=300)
+
+
 # Resize an image
 def resize_image(np_img, new_size):
     old_size = np_img.shape
-    ratio = min(new_size[0]/old_size[0], new_size[1]/old_size[1])
+    ratio = min(new_size[0] / old_size[0], new_size[1] / old_size[1])
 
-    return imresize(np_img, (round(old_size[0]*ratio), round(old_size[1]*ratio)))
+    return imresize(np_img, (round(old_size[0] * ratio), round(old_size[1] * ratio)))
 
-custom_words = ["fig", "figure", "et", "al", "al.", "also",
-                "data", "analyze", "study", "table", "using",
-                "method", "result", "conclusion", "author",
-                "find", "found", "show", '"', "’", "“", "”"]
+
+custom_words = [
+    "fig",
+    "figure",
+    "et",
+    "al",
+    "al.",
+    "also",
+    "data",
+    "analyze",
+    "study",
+    "table",
+    "using",
+    "method",
+    "result",
+    "conclusion",
+    "author",
+    "find",
+    "found",
+    "show",
+    '"',
+    "’",
+    "“",
+    "”",
+]
 stop_words = set(stopwords.words('english') + list(punctuation) + custom_words)
 
 
 # Get average vector from text
-def get_average_vector(model,text,stop_words):
+def get_average_vector(model, text, stop_words):
     tokens = [w.lower() for w in word_tokenize(text) if w.lower() not in stop_words]
     return np.mean(np.array([model.wv[w] for w in tokens if w in model]), axis=0)
 
+
 # Build a corpus for a Text column grouped by Target columns
-def build_corpus(df,target,text,stop_words,wordnet_lemmatizer):
+def build_corpus(df, target, text, stop_words, wordnet_lemmatizer):
     '''
     df: dataframe
     target: prediction target column
     text: text column
     '''
     class_corpus = df.groupby(target).apply(lambda x: x[text].str.cat())
-    class_corpus = class_corpus.apply(lambda x: Counter([wordnet_lemmatizer.lemmatize(w)
-    for w in word_tokenize(x) if w.lower() not in stop_words and not w.isdigit()]
-    # Save the corpus
-    #class_corpus.to_csv('../data/processed/class_corpus.txt',sep='\t',index=False)
-    ))
+    class_corpus = class_corpus.apply(
+        lambda x: Counter(
+            [
+                wordnet_lemmatizer.lemmatize(w)
+                for w in word_tokenize(x)
+                if w.lower() not in stop_words and not w.isdigit()
+            ]
+            # Save the corpus
+            # class_corpus.to_csv('../data/processed/class_corpus.txt',sep='\t',index=False)
+        )
+    )
     return class_corpus
 
 
 # World frequency plot
-def word_cloud_plot_no_mask(corpus,save_plot_dir=None):
+def word_cloud_plot_no_mask(corpus, save_plot_dir=None):
     whole_text_freq = corpus.sum()
-    wc = WordCloud(max_font_size=300,min_font_size=30,
-               max_words=1000,
-               width=4000,
-               height=2000,
-               prefer_horizontal=.9,
-               relative_scaling=.52,
-               background_color='black',
-               mask=None,
-               mode="RGBA").generate_from_frequencies(whole_text_freq)
+    wc = WordCloud(
+        max_font_size=300,
+        min_font_size=30,
+        max_words=1000,
+        width=4000,
+        height=2000,
+        prefer_horizontal=0.9,
+        relative_scaling=0.52,
+        background_color='black',
+        mask=None,
+        mode="RGBA",
+    ).generate_from_frequencies(whole_text_freq)
     plt.figure()
     plt.axis("off")
     plt.tight_layout()
-    #plt.savefig(figname, figdpi = 300)
+    # plt.savefig(figname, figdpi = 300)
     plt.imshow(wc, interpolation="bilinear")
-    #save plot
-    #plt.figure(figsize=(10,5))
-    name= 'word_cloud_plot'
-    figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    plt.savefig(figname,figdpi = 600)
+    # save plot
+    # plt.figure(figsize=(10,5))
+    name = 'word_cloud_plot'
+    figname = '{}{:%Y%m%dT%H%M}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
+    plt.savefig(figname, figdpi=600)
     plt.show()
     plt.close()
 
+
 # Build a word cloud without mask image
-def word_cloud_plot_no_mask(corpus,save_plot_dir=None):
+def word_cloud_plot_no_mask(corpus, save_plot_dir=None):
     whole_text_freq = corpus.sum()
-    wc = WordCloud(max_font_size=300,min_font_size=30,
-               max_words=1000,
-               width=4000,
-               height=2000,
-               prefer_horizontal=.9,
-               relative_scaling=.52,
-               background_color='black',
-               mask=None,
-               mode="RGBA").generate_from_frequencies(whole_text_freq)
+    wc = WordCloud(
+        max_font_size=300,
+        min_font_size=30,
+        max_words=1000,
+        width=4000,
+        height=2000,
+        prefer_horizontal=0.9,
+        relative_scaling=0.52,
+        background_color='black',
+        mask=None,
+        mode="RGBA",
+    ).generate_from_frequencies(whole_text_freq)
     plt.figure()
     plt.axis("off")
     plt.tight_layout()
-    #plt.savefig(figname, figdpi = 300)
+    # plt.savefig(figname, figdpi = 300)
     plt.imshow(wc, interpolation="bilinear")
-    #save plot
-    #plt.figure(figsize=(10,5))
-    name= 'word_cloud_plot'
-    figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    plt.savefig(figname,figdpi = 300)
+    # save plot
+    # plt.figure(figsize=(10,5))
+    name = 'word_cloud_plot'
+    figname = '{}{:%Y%m%dT%H%M}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
+    plt.savefig(figname, figdpi=300)
     plt.close()
 
+
 # Build a word cloud with mask image
-def word_cloud_plot(mask_image_path, corpus,save_plot_dir):
+def word_cloud_plot(mask_image_path, corpus, save_plot_dir):
     mask_image = np.array(Image.open(mask_image_path).convert('L'))
     mask_image = resize_image(mask_image, (8000, 4000))
     whole_text_freq = corpus.sum()
-    wc = WordCloud(max_font_size=300,min_font_size=30,
-               max_words=1000,
-               width=mask_image.shape[1],
-               height=mask_image.shape[0],
-               prefer_horizontal=.9,
-               relative_scaling=.52,
-               background_color=None,
-               mask=mask_image,
-               mode="RGBA").generate_from_frequencies(whole_text_freq)
+    wc = WordCloud(
+        max_font_size=300,
+        min_font_size=30,
+        max_words=1000,
+        width=mask_image.shape[1],
+        height=mask_image.shape[0],
+        prefer_horizontal=0.9,
+        relative_scaling=0.52,
+        background_color=None,
+        mask=mask_image,
+        mode="RGBA",
+    ).generate_from_frequencies(whole_text_freq)
     plt.figure()
     plt.axis("off")
     plt.tight_layout()
     plt.imshow(wc, interpolation="bilinear")
-    #save plot
-    name= 'word_cloud_mask_plot'
-    figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    plt.savefig(figname, figdpi = 600)
+    # save plot
+    name = 'word_cloud_mask_plot'
+    figname = '{}{:%Y%m%dT%H%M}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
+    plt.savefig(figname, figdpi=600)
 
 
 # PCA plot
-def pca_plot(classes, vecs,save_plot_dir=None):
+def pca_plot(classes, vecs, save_plot_dir=None):
     pca = PCA(n_components=2)
     reduced_vecs = pca.fit_transform(vecs)
     fig, ax = plt.subplots()
     cm = plt.get_cmap('jet', 9)
-    colors = [cm(i/9) for i in range(9)]
-    ax.scatter(reduced_vecs[:,0], reduced_vecs[:,1], c=[colors[c-1] for c in classes], cmap='jet', s=8)
+    colors = [cm(i / 9) for i in range(9)]
+    ax.scatter(
+        reduced_vecs[:, 0],
+        reduced_vecs[:, 1],
+        c=[colors[c - 1] for c in classes],
+        cmap='jet',
+        s=8,
+    )
     # adjust x and y limit
-    ax.set_xlim([-0.5,0.5])
-    ax.set_ylim([-0.5,0.5])
-    plt.legend(handles=[Patch(color=colors[i], label='Class {}'.format(i+1)) for i in range(9)])
+    ax.set_xlim([-0.5, 0.5])
+    ax.set_ylim([-0.5, 0.5])
+    plt.legend(
+        handles=[
+            Patch(color=colors[i], label='Class {}'.format(i + 1)) for i in range(9)
+        ]
+    )
     plt.show()
-    #save plot
-    name= 'pca_plot'
-    figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    #image
-    fig.savefig(figname, figdpi = 300)
+    # save plot
+    name = 'pca_plot'
+    figname = '{}{:%Y%m%dT%H%M}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
+    # image
+    fig.savefig(figname, figdpi=300)
     plt.close()
 
+
 # kmeans plot
-def kmeans_plot(classes, vecs,save_plot_dir=None):
+def kmeans_plot(classes, vecs, save_plot_dir=None):
     kmeans = KMeans(n_clusters=9).fit(vecs)
     c_labels = kmeans.labels_
-    reduced_vecs=kmeans.fit_transform(vecs)
+    reduced_vecs = kmeans.fit_transform(vecs)
     fig, ax = plt.subplots()
     cm = plt.get_cmap('jet', 9)
-    colors = [cm(i/9) for i in range(9)]
-    ax.scatter(reduced_vecs[:,0], reduced_vecs[:,1], c=[colors[c-1] for c in c_labels], cmap='jet', s=8)
-    plt.legend(handles=[Patch(color=colors[i], label='Class {}'.format(i+1)) for i in range(9)])
+    colors = [cm(i / 9) for i in range(9)]
+    ax.scatter(
+        reduced_vecs[:, 0],
+        reduced_vecs[:, 1],
+        c=[colors[c - 1] for c in c_labels],
+        cmap='jet',
+        s=8,
+    )
+    plt.legend(
+        handles=[
+            Patch(color=colors[i], label='Class {}'.format(i + 1)) for i in range(9)
+        ]
+    )
     ax.set_xlim()
     ax.set_ylim()
     plt.show()
-    #save plot
-    name= 'kmeans_plot'
-    figname = '{}{:%Y%m%dT%H%M}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
-    #image
-    fig.savefig(figname, figdpi = 300)
+    # save plot
+    name = 'kmeans_plot'
+    figname = '{}{:%Y%m%dT%H%M}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
+    # image
+    fig.savefig(figname, figdpi=300)
     plt.close()
 
 
@@ -310,23 +414,23 @@ def kmeans_plot(classes, vecs,save_plot_dir=None):
 def corr_heattable(df):
     for col in df:
         df[col].astype('category').cat.codes
-    df_corr =df.corr()
+    df_corr = df.corr()
     return corr.style.background_gradient(cmap='coolwarm').set_precision(2)
 
 
 # Heatmap plot
-def corr_heatmap(df,plot_name, save_plot_dir=None):
+def corr_heatmap(df, plot_name, save_plot_dir=None):
     for col in df:
         df[col].astype('category').cat.codes
-    corr =df.corr()
-    plot = sns.heatmap(corr,
-                      xticklabels=corr.columns,
-                      yticklabels=corr.columns)
-    #save plot
-    name= str(plot_name)
-    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(os.path.join(save_plot_dir,name), datetime.datetime.now())
+    corr = df.corr()
+    plot = sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns)
+    # save plot
+    name = str(plot_name)
+    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(
+        os.path.join(save_plot_dir, name), datetime.datetime.now()
+    )
 
-    plt.savefig(figname, figdpi = 600)
+    plt.savefig(figname, figdpi=600)
     return plot
 
 
@@ -352,8 +456,15 @@ def evaluate_features(X, y, clf):
     if clf is None:
         pass
     else:
-        probas = cross_val_predict(clf, X, y, cv=StratifiedKFold(random_state=8), \
-                                   n_jobs=-1, method='predict_proba', verbose=2)
+        probas = cross_val_predict(
+            clf,
+            X,
+            y,
+            cv=StratifiedKFold(random_state=8),
+            n_jobs=-1,
+            method='predict_proba',
+            verbose=2,
+        )
         pred_indices = np.argmax(probas, axis=1)
         classes = np.unique(y)
         preds = classes[pred_indices]
@@ -363,7 +474,7 @@ def evaluate_features(X, y, clf):
 
 
 # Split a pandas dataframe into train and validation dataset
-def split_data(df,text,target,test_size,random_state,stratify=None):
+def split_data(df, text, target, test_size, random_state, stratify=None):
     '''
     df[text]: text data for training
     df[target]: label of text data
@@ -371,40 +482,38 @@ def split_data(df,text,target,test_size,random_state,stratify=None):
     '''
     df[text] = df[text].astype(str)
     df[target] = df[target].astype(str)
-    X= df[text].values
-    y =df[target].values
-    X_tr, X_val, y_tr, y_val = train_test_split(X,
-                                            y,
-                                            test_size=test_size,
-                                            stratify=df[target],
-                                            random_state=random_state)
+    X = df[text].values
+    y = df[target].values
+    X_tr, X_val, y_tr, y_val = train_test_split(
+        X, y, test_size=test_size, stratify=df[target], random_state=random_state
+    )
     return X_tr, X_val, y_tr, y_val
 
 
 # +
-# Simple text clean 
+# Simple text clean
 def clean_text(t):
     """Accepts a Document
     """
     t = t.lower()
     # Remove single characters
-    t = re.sub("[^A-Za-z0-9]"," ",t)
+    t = re.sub("[^A-Za-z0-9]", " ", t)
     # Replace all numbers by a single char
-    t = re.sub("[0-9]+","#",t)
+    t = re.sub("[0-9]+", "#", t)
     return t
+
 
 def clean_text_stemmed(t):
     """Accepts a Document
     """
     t = t.lower()
     # Remove single characters
-    t = re.sub("[^A-Za-z0-9]"," ",t)
+    t = re.sub("[^A-Za-z0-9]", " ", t)
     # Replace all numbers by a single char
-    t = re.sub("[0-9]+","#",t)
+    t = re.sub("[0-9]+", "#", t)
     stemmer = snowballstemmer.stemmer('english')
     tfinal = " ".join(stemmer.stemWords(t.split()))
     return t
-
 
 
 # +
@@ -413,18 +522,38 @@ from nltk.corpus import stopwords
 from string import punctuation
 import re
 
+
 def textClean_full(text):
     text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
     text = text.lower().split()
     # remove stop words
-    custom_words = ["fig", "figure", "et", "al", "al.", "also",
-                "data", "analyze", "study", "table", "using","in",
-                "find", "found", "show", "a",'"', "’", "“", "”","#"]
-    stop_words = set(stopwords.words('english') + list(punctuation) + custom_words)        
-    text = [w for w in text if not w in stop_words]    
+    custom_words = [
+        "fig",
+        "figure",
+        "et",
+        "al",
+        "al.",
+        "also",
+        "data",
+        "analyze",
+        "study",
+        "table",
+        "using",
+        "in",
+        "find",
+        "found",
+        "show",
+        "a",
+        '"',
+        "’",
+        "“",
+        "”",
+        "#",
+    ]
+    stop_words = set(stopwords.words('english') + list(punctuation) + custom_words)
+    text = [w for w in text if not w in stop_words]
     text = " ".join(text)
-    return(text)
-
+    return text
 
 
 # +
@@ -436,6 +565,7 @@ class MySentences(object):
     Args:
         arrays: List of arrays, where each element in the array contains a document.
     """
+
     def __init__(self, *arrays):
         self.arrays = arrays
 
@@ -444,6 +574,7 @@ class MySentences(object):
             for document in array:
                 for sent in nltk.sent_tokenize(document):
                     yield nltk.word_tokenize(sent)
+
 
 def get_word2vec(sentences, location):
     """Returns trained word2vec
@@ -459,11 +590,12 @@ def get_word2vec(sentences, location):
         return model
 
     print('{} not found. training model'.format(location))
-    model = gensim.models.Word2Vec(sentences, size=100, window=5, min_count=5, workers=4)
+    model = gensim.models.Word2Vec(
+        sentences, size=100, window=5, min_count=5, workers=4
+    )
     print('Model done training. Saving to disk')
     model.save(location)
     return model
-
 
 
 # +
@@ -487,6 +619,7 @@ class MyTokenizer:
     def fit_transform(self, X, y=None):
         return self.transform(X)
 
+
 class MeanEmbeddingVectorizer(object):
     def __init__(self, word2vec):
         self.word2vec = word2vec
@@ -500,11 +633,16 @@ class MeanEmbeddingVectorizer(object):
     def transform(self, X):
         X = MyTokenizer().fit_transform(X)
 
-        return np.array([
-            np.mean([self.word2vec.wv[w] for w in words if w in self.word2vec.wv]
-                    or [np.zeros(self.dim)], axis=0)
-            for words in X
-        ])
+        return np.array(
+            [
+                np.mean(
+                    [self.word2vec.wv[w] for w in words if w in self.word2vec.wv]
+                    or [np.zeros(self.dim)],
+                    axis=0,
+                )
+                for words in X
+            ]
+        )
 
     def fit_transform(self, X, y=None):
         return self.transform(X)
@@ -526,11 +664,16 @@ class MeanDoc2Vectorizer(object):
     def transform(self, X):
         X = MyTokenizer().fit_transform(X)
 
-        return np.array([
-            np.mean([self.word2vec.wv[w] for w in words if w in self.word2vec.wv]
-                    or [np.zeros(self.dim)], axis=0)
-            for words in X
-        ])
+        return np.array(
+            [
+                np.mean(
+                    [self.word2vec.wv[w] for w in words if w in self.word2vec.wv]
+                    or [np.zeros(self.dim)],
+                    axis=0,
+                )
+                for words in X
+            ]
+        )
 
     def fit_transform(self, X, y=None):
         return self.transform(X)
@@ -553,43 +696,54 @@ def w2vectors(model, corpus_size, vectors_size, vectors_type):
 
 
 # A baseline LSTM model
-def baseline_model(vocabulary_size,X):
+def baseline_model(vocabulary_size, X):
     model = Sequential()
-    model.add(Embedding(vocabulary_size, 64, input_length = X.shape[1]))
+    model.add(Embedding(vocabulary_size, 64, input_length=X.shape[1]))
     model.add(LSTM(196, recurrent_dropout=0.2, dropout=0.2))
-    model.add(Dense(9,activation='softmax'))
-    model.compile(loss = 'categorical_crossentropy', optimizer='adam', metrics = ['categorical_crossentropy'])
+    model.add(Dense(9, activation='softmax'))
+    model.compile(
+        loss='categorical_crossentropy',
+        optimizer='adam',
+        metrics=['categorical_crossentropy'],
+    )
     return model
 
 
 # Embedding + LSTM model
-def EL_model(vocabulary_size,X, embedding_matrix,embed_matrix_dim):
+def EL_model(vocabulary_size, X, embedding_matrix, embed_matrix_dim):
     model = Sequential()
-    model.add(Embedding(vocabulary_size, embed_matrix_dim, input_length = X.shape[1],\
-                       weights=[embedding_matrix], trainable=False))
+    model.add(
+        Embedding(
+            vocabulary_size,
+            embed_matrix_dim,
+            input_length=X.shape[1],
+            weights=[embedding_matrix],
+            trainable=False,
+        )
+    )
     model.add(LSTM(196))
     model.add(Dense(9, activation='softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(
+        loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy']
+    )
     return model
 
 
 # +
 # Select multiple pandas columns and convert to vectors
 class PandasSelector(BaseEstimator, TransformerMixin):
-
     def __init__(self, columns):
         self.columns = columns
 
-    def fit(self, x, y = None):
+    def fit(self, x, y=None):
         return self
 
     def transform(self, x):
-        return x.loc[:,self.columns]
+        return x.loc[:, self.columns]
 
 
 class PandasToDict(BaseEstimator, TransformerMixin):
-
-    def fit(self, x, y = None):
+    def fit(self, x, y=None):
         return self
 
     def transform(self, x):
@@ -619,20 +773,21 @@ class Converter(BaseEstimator, TransformerMixin):
 
 
 # Select one dataframe column for vectorization
-def build_preprocessor(df,field):
+def build_preprocessor(df, field):
     field_idx = list(df.columns).index(field)
     return lambda x: default_preprocessor(x[field_idx])
 
+
 # Process df type
-def df_process(df,name=None):
-    df =df.drop(['ID'],axis =1)
-    df=df.dropna(subset=['Text','Gene','Variation'])
+def df_process(df, name=None):
+    df = df.drop(['ID'], axis=1)
+    df = df.dropna(subset=['Text', 'Gene', 'Variation'])
     df['Gene'] = df['Gene'].astype(str)
     df['Variation'] = df['Variation'].astype(str)
     df['Text'] = df['Text'].astype(str)
     print(df.head(1))
-    csv_name =str(name)+'df_process.csv'
-    df.to_csv(csv_name,index=False)
+    csv_name = str(name) + 'df_process.csv'
+    df.to_csv(csv_name, index=False)
     return df
 
 
@@ -665,20 +820,21 @@ def get_vectors(model, corpus_size, vectors_size, vectors_type):
     return vectors
 
 
-def build_d2v_model(all_data,epoch_nr,model_name):
+def build_d2v_model(all_data, epoch_nr, model_name):
     # Initialize Doc2Vec model
-    model_dbow = Doc2Vec(dm=0, \
-                     vector_size=300,\
-                     negative=5, \
-                     min_count=1, \
-                     alpha=0.065, \
-                     min_alpha=0.065)
+    model_dbow = Doc2Vec(
+        dm=0, vector_size=300, negative=5, min_count=1, alpha=0.065, min_alpha=0.065
+    )
     # Build Vocabulary
     model_dbow.build_vocab([x for x in tqdm(all_data)])
     # Build Model
-    epoch_nr =int(epoch_nr)
+    epoch_nr = int(epoch_nr)
     for epoch in range(epoch_nr):
-        model_dbow.train(utils.shuffle([x for x in tqdm(all_data)]), total_examples=len(all_data), epochs=1)
+        model_dbow.train(
+            utils.shuffle([x for x in tqdm(all_data)]),
+            total_examples=len(all_data),
+            epochs=1,
+        )
         model_dbow.alpha -= 0.002
         model_dbow.min_alpha = model_dbow.alpha
     model_dbow.save(model_name)
@@ -687,15 +843,18 @@ def build_d2v_model(all_data,epoch_nr,model_name):
 
 from keras.utils import np_utils
 from sklearn.preprocessing import LabelEncoder
+
+
 def encode_label(df):
     label_encoder = LabelEncoder()
     label_encoder.fit(df['Class'])
     encoded_y = np_utils.to_categorical((label_encoder.transform(df['Class'])))
-    print('The encode_y shape is ',encoded_y.shape)
+    print('The encode_y shape is ', encoded_y.shape)
+
 
 def baseline_model():
     model = Sequential()
-    model.add(Dense(256,input_shape=(int(stack_shape),)))
+    model.add(Dense(256, input_shape=(int(stack_shape),)))
     model.add(Dense(input_dim, init='normal', activation='relu'))
     model.add(Dropout(0.3))
     model.add(Dense(256, init='normal', activation='relu'))
@@ -707,21 +866,33 @@ def baseline_model():
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
     return model
 
+
 # Embedding + LSTM model
-def EL_model(vocabulary_size,X, embedding_matrix,embed_matrix_dim):
+def EL_model(vocabulary_size, X, embedding_matrix, embed_matrix_dim):
     model = Sequential()
-    model.add(Embedding(vocabulary_size, embed_matrix_dim, input_length = X.shape[1],\
-                       weights=[embedding_matrix], trainable=False))
+    model.add(
+        Embedding(
+            vocabulary_size,
+            embed_matrix_dim,
+            input_length=X.shape[1],
+            weights=[embedding_matrix],
+            trainable=False,
+        )
+    )
     model.add(LSTM(196))
     model.add(Dense(9, activation='softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(
+        loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy']
+    )
     return model
 
 
 import matplotlib.pyplot as plt
+
+
 def plot_history(estimator):
-    fig = plt.figure(figsize=(5,5))
-    #plt.subplot(121)
+    fig = plt.figure(figsize=(5, 5))
+    # plt.subplot(121)
     plt.plot(estimator.history['acc'])
     plt.plot(estimator.history['val_acc'])
     plt.title('model accuracy')
@@ -730,9 +901,9 @@ def plot_history(estimator):
     plt.legend(['train', 'valid'], loc='upper left')
     plt.show()
 
-# summarize history for loss
-    #plt.subplot(122)
-    fig = plt.figure(figsize=(5,5))
+    # summarize history for loss
+    # plt.subplot(122)
+    fig = plt.figure(figsize=(5, 5))
     plt.plot(estimator.history['loss'])
     plt.plot(estimator.history['val_loss'])
     plt.title('model loss')
@@ -740,13 +911,16 @@ def plot_history(estimator):
     plt.xlabel('epoch')
     plt.legend(['train', 'valid'], loc='upper left')
     plt.show()
-    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(('full_kaggle_kears'), datetime.datetime.now())
-    fig.savefig(figname,figdpi = 600)
+    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(
+        ('full_kaggle_kears'), datetime.datetime.now()
+    )
+    fig.savefig(figname, figdpi=600)
     plt.close()
 
+
 def plot_history(estimator):
-    fig = plt.figure(figsize=(5,5))
-    #plt.subplot(121)
+    fig = plt.figure(figsize=(5, 5))
+    # plt.subplot(121)
     plt.plot(estimator.history['acc'])
     plt.plot(estimator.history['val_acc'])
     plt.title('model accuracy')
@@ -755,9 +929,9 @@ def plot_history(estimator):
     plt.legend(['train', 'valid'], loc='upper left')
     plt.show()
 
-# summarize history for loss
-    #plt.subplot(122)
-    fig = plt.figure(figsize=(5,5))
+    # summarize history for loss
+    # plt.subplot(122)
+    fig = plt.figure(figsize=(5, 5))
     plt.plot(estimator.history['loss'])
     plt.plot(estimator.history['val_loss'])
     plt.title('model loss')
@@ -765,6 +939,8 @@ def plot_history(estimator):
     plt.xlabel('epoch')
     plt.legend(['train', 'valid'], loc='upper left')
     plt.show()
-    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(('full_kaggle_kears'), datetime.datetime.now())
-    fig.savefig(figname,figdpi = 600)
+    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(
+        ('full_kaggle_kears'), datetime.datetime.now()
+    )
+    fig.savefig(figname, figdpi=600)
     plt.close()
