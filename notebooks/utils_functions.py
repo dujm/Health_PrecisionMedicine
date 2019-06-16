@@ -44,7 +44,7 @@ from collections import Counter
 
 # +
 # Dimensionaly reduction libraries
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, TruncatedSVD
 
 # Clustering library
 from sklearn.cluster import KMeans
@@ -57,7 +57,7 @@ from sklearn.metrics import log_loss, accuracy_score
 import scikitplot.plotters as skplt
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline, make_union
-
+from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 
 # keras
 from tensorflow.keras import backend
@@ -129,16 +129,16 @@ def drop_y(df):
 
 
 # Group by a column and count the size
-def groupby_col_count(df, colname, colname2=None, save_csv_dir=None, head=None):
-    df1 = df.groupby([df[colname]]).size().sort_values(ascending=False)
+def groupby_col_count(df, colname, save_csv_dir=None, head=None):
+    df1 = df.groupby([colname]).size().sort_values(ascending=False)
     name = 'groupby_' + str(colname)
     csvname = '{}.csv'.format(os.path.join(save_csv_dir, name))
     df1.to_csv(csvname, index=False)
-    return df1.head(head)
+    return df1
 
 
 # Bar Plot: Count by colname
-def col_count_plot(df, colname, save_plot_dir=None):
+def col_count_plot(df, colname):
     '''
     df: dataframe
     colname: column name
@@ -148,8 +148,8 @@ def col_count_plot(df, colname, save_plot_dir=None):
     number = df[colname].value_counts().values
     number = [str(x) for x in number.tolist()]
     number = ['n: ' + i for i in number]
-    ax = sns.countplot(x=colname, data=df)
     pos = range(len(number))
+    ax = sns.countplot(x=colname, data=df)
     for tick, label in zip(pos, ax.get_xticklabels()):
         ax.text(
             pos[tick],
@@ -160,13 +160,11 @@ def col_count_plot(df, colname, save_plot_dir=None):
             color='w',
             weight='semibold',
         )
-    fig = ax.get_figure()
+    plt.xticks(rotation=90)
     # save plot
     name = str(colname) + 'count'
-    figname = '{}{:%Y%m%dT%H%M}.png'.format(
-        os.path.join(save_plot_dir, name), datetime.datetime.now()
-    )
-    fig.savefig(figname, figdpi=300)
+    fig.savefig(name, figdpi=300)
+    return ax.get_figure()
 
 
 # Frequency plot of a col
@@ -283,6 +281,11 @@ def word_cloud_plot_no_mask(corpus, save_plot_dir=None):
     plt.savefig(figname, figdpi=600)
     plt.show()
     plt.close()
+
+
+def add_col(df, condition, condition_col, result, newcol):
+    df['Normalized'] = np.where(df['Currency'] == condition, result)
+    return df
 
 
 # Build a word cloud without mask image
@@ -432,6 +435,40 @@ def corr_heatmap(df, plot_name, save_plot_dir=None):
 
     plt.savefig(figname, figdpi=600)
     return plot
+
+
+# OneHotEncoder
+def onehot_ft(df, colname):
+    enc = OneHotEncoder(handle_unknown='ignore')
+    temp = df[colname].values.reshape(-1, 1)
+    onehot_col = enc.fit_transform(temp)
+    return onehot_col
+
+
+# Select the best n_components for TruncatedSVD
+def select_n_components(var_ratio, goal_var: float) -> int:
+    # Set initial variance explained so far
+    total_variance = 0.0
+
+    # Set initial number of features
+    n_components = 0
+
+    # For the explained variance of each feature:
+    for explained_variance in var_ratio:
+
+        # Add the explained variance to the total
+        total_variance += explained_variance
+
+        # Add one to the number of components
+        n_components += 1
+
+        # If we reach our goal level of explained variance
+        if total_variance >= goal_var:
+            # End the loop
+            break
+
+    # Return the number of components
+    return n_components
 
 
 def evaluate_features(X, y, clf):
@@ -780,14 +817,67 @@ def build_preprocessor(df, field):
 
 # Process df type
 def df_process(df, name=None):
-    df = df.drop(['ID'], axis=1)
     df = df.dropna(subset=['Text', 'Gene', 'Variation'])
     df['Gene'] = df['Gene'].astype(str)
     df['Variation'] = df['Variation'].astype(str)
     df['Text'] = df['Text'].astype(str)
     print(df.head(1))
-    csv_name = str(name) + 'df_process.csv'
-    df.to_csv(csv_name, index=False)
+    # df.to_csv(name,index=False)
+    # print(name,'file is saved')
+    return df
+
+
+# Group Variations in df
+def group_Variation(df):
+    df['Variation'] = df['Variation'].str.lower()
+    df["Variation_group"] = df["Variation"]
+
+    # Conditions used to keep the column value
+    condition = (
+        'truncating mutations|deletion|amplification|overexpression|promoter|fusions'
+    )
+    df['Variation_group'] = np.where(
+        df['Variation_group'].str.contains(condition),
+        df['Variation_group'],
+        df['Variation_group'],
+    )
+
+    # Column not containing the condition are first grouped in snv_other
+    df["Variation_group"][
+        ~df['Variation'].str.contains(condition, case=False)
+    ] = "snv_other"
+    # After inspect the data, define subgroups in snv_other
+    df['Variation_group'] = np.where(
+        df['Variation_group'].str.contains(r"[*]"), 'stop_codon', df['Variation_group']
+    )
+    df["Variation_group"][
+        df['Variation'].str.contains('fusion', case=False) == True
+    ] = "fusions"
+    df['Variation_group'] = np.where(
+        df['Variation_group'].str.contains("del"), 'del', df['Variation_group']
+    )
+    df['Variation_group'] = np.where(
+        df['Variation_group'].str.contains("ins"), 'ins', df['Variation_group']
+    )
+    df['Variation_group'] = np.where(
+        df['Variation_group'].str.contains("dup"), 'dup', df['Variation_group']
+    )
+    df['Variation_group'] = np.where(
+        df['Variation_group'].str.contains("promoter"),
+        'promoter',
+        df['Variation_group'],
+    )
+    df['Variation_group'] = np.where(
+        df['Variation_group'].str.contains("truncating mutations"),
+        'truncating mutations',
+        df['Variation_group'],
+    )
+
+    # Drop variation
+    df['Variation'] = df['Variation_group']
+    df = df.drop(['Variation_group'], axis=1)
+    print(df.head(1))
+    df.to_csv('pm_all_data_clean_new_variation_20190616.csv', index=False)
     return df
 
 
@@ -820,6 +910,57 @@ def get_vectors(model, corpus_size, vectors_size, vectors_type):
     return vectors
 
 
+from gensim.models.doc2vec import LabeledSentence
+from gensim import utils
+
+
+def constructLabeledSentences(df, col):
+    data = df[col]
+    sentences = []
+    for index, row in data.iteritems():
+        sentences.append(
+            LabeledSentence(
+                utils.to_unicode(row).split(), ['Text' + '_%s' % str(index)]
+            )
+        )
+    return sentences
+
+
+from gensim.models import Doc2Vec
+
+
+def get_doc2vec_model(sentences, location, text_input_dim):
+    """Returns trained word2vec
+
+    Args:
+        sentences: iterator for sentences
+
+        location (str): Path to save/load doc2vec
+    """
+    if os.path.exists(location):
+        print('Found {}'.format(location))
+        text_model = Doc2Vec.load(location)
+    else:
+        print('{} not found. training model'.format(location))
+        text_model = Doc2Vec(
+            min_count=1,
+            window=5,
+            size=text_input_dim,
+            sample=1e-4,
+            negative=5,
+            workers=4,
+            iter=5,
+            seed=1,
+        )
+        text_model.build_vocab(sentences)
+        text_model.train(
+            sentences, total_examples=text_model.corpus_count, epochs=text_model.iter
+        )
+        text_model.save(location)
+        print(location, 'model is saved')
+    return text_model
+
+
 def build_d2v_model(all_data, epoch_nr, model_name):
     # Initialize Doc2Vec model
     model_dbow = Doc2Vec(
@@ -845,26 +986,23 @@ from keras.utils import np_utils
 from sklearn.preprocessing import LabelEncoder
 
 
+def build_text_array(text_model, text_input_dim, train_size, test_size):
+    text_train_arrays = np.zeros((train_size, text_input_dim))
+    text_test_arrays = np.zeros((test_size, text_input_dim))
+    for i in range(train_size):
+        text_train_arrays[i] = text_model.docvecs['Text_' + str(i)]
+    j = 0
+    for i in range(train_size, train_size + test_size):
+        text_test_arrays[j] = text_model.docvecs['Text_' + str(i)]
+        j = j + 1
+    return text_train_arrays, text_test_arrays
+
+
 def encode_label(df):
     label_encoder = LabelEncoder()
     label_encoder.fit(df['Class'])
     encoded_y = np_utils.to_categorical((label_encoder.transform(df['Class'])))
     print('The encode_y shape is ', encoded_y.shape)
-
-
-def baseline_model():
-    model = Sequential()
-    model.add(Dense(256, input_shape=(int(stack_shape),)))
-    model.add(Dense(input_dim, init='normal', activation='relu'))
-    model.add(Dropout(0.3))
-    model.add(Dense(256, init='normal', activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(80, init='normal', activation='relu'))
-    model.add(Dense(9, init='normal', activation="softmax"))
-
-    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
-    return model
 
 
 # Embedding + LSTM model
@@ -887,10 +1025,43 @@ def EL_model(vocabulary_size, X, embedding_matrix, embed_matrix_dim):
     return model
 
 
-import matplotlib.pyplot as plt
+# Build keras model
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, LSTM, Embedding, Input, RepeatVector
+from keras.optimizers import SGD
+
+
+def baseline_model():
+    model = Sequential()
+    # 1) reduced capacity
+    model.add(Dense(64, input_shape=(input_shape,)))
+    # model.add(Dense(input_dim, init='normal', activation='relu'))
+    model.add(Dropout(0.3))
+    model.add(Dense(64, init='normal', activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(32, init='normal', activation='relu'))
+    model.add(Dense(9, init='normal', activation="softmax"))
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    return model
+
+
+def save_history_df(estimator):
+    # Save model history
+    history = estimator.history
+    epochs = range(1, len(next(iter(history.values()))) + 1)
+    # Save history in a csv file
+    df = pd.DataFrame(history, index=epochs)
+    df.index.names = ['epoch']
+    name = '{}{:%Y%m%dT%H%M%S}.csv'.format(
+        ('full_kaggle_keras'), datetime.datetime.now()
+    )
+    df.to_csv(name)
+    return df
 
 
 def plot_history(estimator):
+    # plot the model history
     fig = plt.figure(figsize=(5, 5))
     # plt.subplot(121)
     plt.plot(estimator.history['acc'])
@@ -916,31 +1087,4 @@ def plot_history(estimator):
     )
     fig.savefig(figname, figdpi=600)
     plt.close()
-
-
-def plot_history(estimator):
-    fig = plt.figure(figsize=(5, 5))
-    # plt.subplot(121)
-    plt.plot(estimator.history['acc'])
-    plt.plot(estimator.history['val_acc'])
-    plt.title('model accuracy')
-    plt.ylabel('accuracy')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'valid'], loc='upper left')
-    plt.show()
-
-    # summarize history for loss
-    # plt.subplot(122)
-    fig = plt.figure(figsize=(5, 5))
-    plt.plot(estimator.history['loss'])
-    plt.plot(estimator.history['val_loss'])
-    plt.title('model loss')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'valid'], loc='upper left')
-    plt.show()
-    figname = '{}{:%Y%m%dT%H%M%S}.png'.format(
-        ('full_kaggle_kears'), datetime.datetime.now()
-    )
-    fig.savefig(figname, figdpi=600)
-    plt.close()
+    return fig
