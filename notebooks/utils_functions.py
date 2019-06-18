@@ -36,7 +36,7 @@ import snowballstemmer
 
 
 # Word cloud visualization libraries
-from scipy.misc import imresize
+
 from PIL import Image
 from wordcloud import WordCloud, ImageColorGenerator
 from collections import Counter
@@ -162,9 +162,10 @@ def col_count_plot(df, colname):
         )
     plt.xticks(rotation=90)
     # save plot
+    fig = ax.get_figure()
     name = str(colname) + 'count'
     fig.savefig(name, figdpi=300)
-    return ax.get_figure()
+    return fig
 
 
 # Frequency plot of a col
@@ -188,14 +189,15 @@ def frequency_plot(df, colname, save_plot_dir=None):
     )
     plt.savefig(plotname, figdpi=300)
 
-
+'''
 # Resize an image
+from scipy.misc import imresize
 def resize_image(np_img, new_size):
     old_size = np_img.shape
     ratio = min(new_size[0] / old_size[0], new_size[1] / old_size[1])
 
     return imresize(np_img, (round(old_size[0] * ratio), round(old_size[1] * ratio)))
-
+'''
 
 custom_words = [
     "fig",
@@ -982,9 +984,6 @@ def build_d2v_model(all_data, epoch_nr, model_name):
     return model
 
 
-from keras.utils import np_utils
-from sklearn.preprocessing import LabelEncoder
-
 
 def build_text_array(text_model, text_input_dim, train_size, test_size):
     text_train_arrays = np.zeros((train_size, text_input_dim))
@@ -997,13 +996,13 @@ def build_text_array(text_model, text_input_dim, train_size, test_size):
         j = j + 1
     return text_train_arrays, text_test_arrays
 
-
-def encode_label(df):
+from sklearn.preprocessing import LabelEncoder
+from keras.utils import np_utils
+def label_encoder(df):
     label_encoder = LabelEncoder()
     label_encoder.fit(df['Class'])
     encoded_y = np_utils.to_categorical((label_encoder.transform(df['Class'])))
     print('The encode_y shape is ', encoded_y.shape)
-
 
 # Embedding + LSTM model
 def EL_model(vocabulary_size, X, embedding_matrix, embed_matrix_dim):
