@@ -323,7 +323,7 @@ def word_cloud_plot_no_mask(corpus, save_plot_dir=None):
 # Build a word cloud with mask image
 def word_cloud_plot(mask_image_path, corpus, save_plot_dir):
     mask_image = np.array(Image.open(mask_image_path).convert('L'))
-    mask_image = resize_image(mask_image, (8000, 4000))
+    #mask_image = resize_image(mask_image, (8000, 4000))
     whole_text_freq = corpus.sum()
     wc = WordCloud(
         max_font_size=300,
